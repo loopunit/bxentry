@@ -1,3 +1,12 @@
+A cross-platform application wrapper splintered from the examples framework in (https://github.com/bkaradzic/bgfx)
+
+The application wrapper in the bgfx test/examples framework is actually pretty decent and imo is worth breaking out into its own module so it can be easily used by applications outside bgfx.
+
+The standard bgfx build system doesn't really fit into my workflow, so I don't have that hooked up. Instead, I use a fork of bgfx.cmake (https://github.com/loopunit/bgfx.cmake)
+
+No clue what the proper procedure is for a splinter of an oss project is, but since this is all bkaradzic's work, I'm just going to retain all the original documentation/legal/etc.
+
+============================================================================
 [bgfx](https://github.com/bkaradzic/bgfx) - Cross-platform rendering library
 ============================================================================
 
