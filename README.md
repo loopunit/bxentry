@@ -6,7 +6,10 @@ The standard bgfx build system doesn't really fit into my workflow, so I don't h
 
 No clue what the proper procedure is for a splinter of an oss project is, but since this is all bkaradzic's work, I'm just going to retain all the original documentation/legal/etc.
 
-============================================================================
+-------------------------------------------------------------
+
+
+
 [bgfx](https://github.com/bkaradzic/bgfx) - Cross-platform rendering library
 ============================================================================
 
