@@ -22,6 +22,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <xinput.h>
+#include <shellapi.h>
 
 #ifndef XINPUT_GAMEPAD_GUIDE
 #	define XINPUT_GAMEPAD_GUIDE 0x400
@@ -1146,6 +1147,71 @@ int main(int _argc, const char* const* _argv)
 {
 	using namespace entry;
 	return s_ctx.run(_argc, _argv);
+}
+
+struct CmdLine
+{
+	char **argv;
+	int argc;
+
+	CmdLine()
+	{
+		argv = nullptr;
+		argc = 0;
+
+		int commandLineLen = 0;
+		LPWSTR *argvWide = CommandLineToArgvW(GetCommandLineW(), &commandLineLen);
+
+		try
+		{
+			argv = new char*[argc];
+			for (int i = 0; i < argc; ++i)
+			{
+				argv[i] = nullptr;
+			}
+
+			argc = commandLineLen;
+			for (int i = 0; i < argc; ++i)
+			{
+				argv[i] = EncodeToUTF8(argvWide[i]);
+			}
+			LocalFree(argvWide);
+		}
+		catch (...)
+		{
+			LocalFree(argvWide);
+			throw;
+		}
+	}
+
+	CmdLine(const int argcIn, char **argvIn)
+	{
+		argv = argvIn;
+		argc = argcIn;
+	}
+
+	char *EncodeToUTF8(const LPWSTR in)
+	{
+		const int inLen = wcslen(in);
+		const int s = WideCharToMultiByte(CP_UTF8, 0, in, inLen, NULL, 0, NULL, NULL);
+		char *const out = new char[s + 1];
+		WideCharToMultiByte(CP_UTF8, 0, in, inLen, out, s, NULL, NULL);
+		return out;
+	}
+
+};
+
+int CALLBACK WinMain(
+	_In_ HINSTANCE	hInstance,
+	_In_ HINSTANCE	hPrevInstance,
+	_In_ LPSTR,
+	_In_ int
+)
+{
+	CmdLine cmd;
+	using namespace entry;
+	const int result = s_ctx.run(cmd.argc, cmd.argv);
+	return result;
 }
 
 #endif // BX_PLATFORM_WINDOWS
