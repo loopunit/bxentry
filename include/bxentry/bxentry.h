@@ -322,4 +322,11 @@ namespace entry
 
 } // namespace entry
 
+///
+uint8_t inputGetModifiersState();
+bool inputGetKeyState(entry::Key::Enum _key, uint8_t* _modifiers);
+const uint8_t* inputGetChar();
+bool inputHasChar();
+
+
 #endif // BXENTRY_H_HEADER_GUARD

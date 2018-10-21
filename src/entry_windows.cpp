@@ -1192,7 +1192,7 @@ struct CmdLine
 
 	char *EncodeToUTF8(const LPWSTR in)
 	{
-		const int inLen = wcslen(in);
+		const int inLen = (int)wcslen(in);
 		const int s = WideCharToMultiByte(CP_UTF8, 0, in, inLen, NULL, 0, NULL, NULL);
 		char *const out = new char[s + 1];
 		WideCharToMultiByte(CP_UTF8, 0, in, inLen, out, s, NULL, NULL);

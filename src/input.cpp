@@ -153,6 +153,11 @@ struct InputKeyboard
 		m_ring.m_read    = 0;
 	}
 
+	bool hasChar()
+	{
+		return (0 < m_ring.available());
+	}
+
 	uint32_t m_key[256];
 	bool m_once[256];
 
@@ -338,6 +343,11 @@ void inputChar(uint8_t _len, const uint8_t _char[4])
 const uint8_t* inputGetChar()
 {
 	return s_input->m_keyboard.popChar();
+}
+
+bool inputHasChar()
+{
+	return s_input->m_keyboard.hasChar();
 }
 
 void inputCharFlush()
