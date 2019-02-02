@@ -602,8 +602,7 @@ restart:
 
 		for (AppI* app = getFirstApp(); NULL != app; app = app->getNext() )
 		{
-			if (NULL == selected
-			&&  bx::strFindI(app->getName(), find) )
+			if (NULL == selected && !bx::strFindI(app->getName(), find).isEmpty() )
 			{
 				selected = app;
 			}

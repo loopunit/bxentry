@@ -29,27 +29,27 @@ struct CmdContext
 
 	void add(const char* _name, ConsoleFn _fn, void* _userData)
 	{
-		uint32_t cmd = bx::hash<bx::HashMurmur2A>(_name, (uint32_t)bx::strLen(_name) );
+		uint32_t cmd = bx::hash<bx::HashMurmur2A>(_name, (uint32_t)bx::strLen(_name));
 		BX_CHECK(m_lookup.end() == m_lookup.find(cmd), "Command \"%s\" already exist.", _name);
 		Func fn = { _fn, _userData };
-		m_lookup.insert(stl::make_pair(cmd, fn) );
+		m_lookup.insert(stl::make_pair(cmd, fn));
 	}
 
 	void exec(const char* _cmd)
 	{
-		for (const char* next = _cmd; '\0' != *next; _cmd = next)
+		for (bx::StringView cmd(_cmd); !cmd.isEmpty();)
 		{
 			char commandLine[1024];
 			uint32_t size = sizeof(commandLine);
 			int argc;
 			char* argv[64];
-			next = bx::tokenizeCommandLine(_cmd, commandLine, size, argc, argv, BX_COUNTOF(argv), '\n');
+			bx::StringView next = bx::tokenizeCommandLine(cmd, commandLine, size, argc, argv, BX_COUNTOF(argv), '\n');
 			if (argc > 0)
 			{
 				int err = -1;
-				uint32_t cmd = bx::hash<bx::HashMurmur2A>(argv[0], (uint32_t)bx::strLen(argv[0]) );
-				CmdLookup::iterator it = m_lookup.find(cmd);
-				if (it != m_lookup.end() )
+				uint32_t cmdc = bx::hash<bx::HashMurmur2A>(argv[0], (uint32_t)bx::strLen(argv[0]));
+				CmdLookup::iterator it = m_lookup.find(cmdc);
+				if (it != m_lookup.end())
 				{
 					Func& fn = it->second;
 					err = fn.m_fn(this, fn.m_userData, argc, argv);
@@ -61,20 +61,19 @@ struct CmdContext
 					break;
 
 				case -1:
-					{
-						stl::string tmp(_cmd, next-_cmd - (*next == '\0' ? 0 : 1) );
-						DBG("Command '%s' doesn't exist.", tmp.c_str() );
-					}
-					break;
+				{
+					DBG("Command '%s' doesn't exist.", cmd.getPtr());
+				}
+				break;
 
 				default:
-					{
-						stl::string tmp(_cmd, next-_cmd - (*next == '\0' ? 0 : 1) );
-						DBG("Failed '%s' err: %d.", tmp.c_str(), err);
-					}
-					break;
+				{
+					DBG("Failed '%s' err: %d.", cmd.getPtr(), err);
+				}
+				break;
 				}
 			}
+			cmd = next;
 		}
 	}
 
