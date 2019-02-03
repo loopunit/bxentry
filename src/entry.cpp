@@ -18,7 +18,7 @@
 #include "cmd.h"
 #include "input.h"
 
-extern "C" int32_t _main_(int32_t _argc, char** _argv);
+extern int _main_(int _argc, char** _argv);
 
 namespace entry
 {
