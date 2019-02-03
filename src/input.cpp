@@ -11,10 +11,8 @@
 
 #include <bx/allocator.h>
 #include <bx/ringbuffer.h>
-#include <tinystl/string.h>
-#include <tinystl/allocator.h>
-#include <tinystl/unordered_map.h>
-namespace stl = tinystl;
+#include <string>
+#include <unordered_map>
 
 struct InputMouse
 {
@@ -203,12 +201,12 @@ struct Input
 
 	void addBindings(const char* _name, const InputBinding* _bindings)
 	{
-		m_inputBindingsMap.insert(stl::make_pair(stl::string(_name), _bindings) );
+		m_inputBindingsMap.insert(std::make_pair(std::string(_name), _bindings) );
 	}
 
 	void removeBindings(const char* _name)
 	{
-		InputBindingMap::iterator it = m_inputBindingsMap.find(stl::string(_name));
+		InputBindingMap::iterator it = m_inputBindingsMap.find(std::string(_name));
 		if (it != m_inputBindingsMap.end() )
 		{
 			m_inputBindingsMap.erase(it);
@@ -281,23 +279,24 @@ struct Input
 		}
 	}
 
-	typedef stl::unordered_map<stl::string, const InputBinding*> InputBindingMap;
+	typedef std::unordered_map<std::string, const InputBinding*> InputBindingMap;
 	InputBindingMap m_inputBindingsMap;
 	InputKeyboard m_keyboard;
 	InputMouse m_mouse;
 	Gamepad m_gamepad[ENTRY_CONFIG_MAX_GAMEPADS];
 };
 
-static Input* s_input;
+static Input* s_input = nullptr;
 
 void inputInit()
 {
-	s_input = BX_NEW(entry::getAllocator(), Input);
+	s_input = new Input();
 }
 
 void inputShutdown()
 {
-	BX_DELETE(entry::getAllocator(), s_input);
+	delete s_input;
+	s_input = nullptr;
 }
 
 void inputAddBindings(const char* _name, const InputBinding* _bindings)

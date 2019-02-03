@@ -31,7 +31,7 @@
 #include <bx/handlealloc.h>
 #include <bx/thread.h>
 #include <bx/mutex.h>
-#include <tinystl/string.h>
+#include <string>
 
 #include "dbg.h"
 
@@ -264,7 +264,7 @@ namespace entry
 		uint32_t m_height;
 		uint32_t m_flags;
 		bool	 m_value;
-		tinystl::string m_title;
+		std::string m_title;
 		WindowHandle m_handle;
 	};
 

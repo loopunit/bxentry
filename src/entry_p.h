@@ -6,8 +6,6 @@
 #ifndef ENTRY_PRIVATE_H_HEADER_GUARD
 #define ENTRY_PRIVATE_H_HEADER_GUARD
 
-#define TINYSTL_ALLOCATOR entry::TinyStlAllocator
-
 #include <bx/spscqueue.h>
 #include <bx/filepath.h>
 
@@ -66,13 +64,6 @@
 
 namespace entry
 {
-	struct TinyStlAllocator
-	{
-		static void* static_allocate(size_t _bytes);
-		static void static_deallocate(void* _ptr, size_t /*_bytes*/);
-	};
-
-
 	int local_main(int _argc, const char* const* _argv);
 
 	char keyToAscii(Key::Enum _key, uint8_t _modifiers);

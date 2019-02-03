@@ -29,8 +29,6 @@ BX_PRAGMA_DIAGNOSTIC_POP()
 #include <bx/thread.h>
 #include <bx/handlealloc.h>
 #include <bx/readerwriter.h>
-#include <tinystl/allocator.h>
-#include <tinystl/string.h>
 
 namespace entry
 {
@@ -290,7 +288,7 @@ namespace entry
 		uint32_t m_width;
 		uint32_t m_height;
 		uint32_t m_flags;
-		tinystl::string m_title;
+		std::string m_title;
 		bool m_flagsEnabled;
 	};
 

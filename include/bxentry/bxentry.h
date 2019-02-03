@@ -243,10 +243,6 @@ namespace entry
 
 	bool processEvents(uint32_t& _width, uint32_t& _height, uint32_t& _debug, uint32_t& _reset, MouseState* _mouse = NULL);
 
-	bx::FileReaderI* getFileReader();
-	bx::FileWriterI* getFileWriter();
-	bx::AllocatorI*  getAllocator();
-
 	WindowHandle createWindow(int32_t _x, int32_t _y, uint32_t _width, uint32_t _height, uint32_t _flags = ENTRY_WINDOW_FLAG_NONE, const char* _title = "");
 	void destroyWindow(WindowHandle _handle);
 	void setWindowPos(WindowHandle _handle, int32_t _x, int32_t _y);

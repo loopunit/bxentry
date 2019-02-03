@@ -16,8 +16,7 @@
 #include <bx/timer.h>
 #include <bx/uint32_t.h>
 
-#include <tinystl/allocator.h>
-#include <tinystl/string.h>
+#include <string>
 
 #include <windows.h>
 #include <windowsx.h>
@@ -335,7 +334,7 @@ namespace entry
 		uint32_t m_width;
 		uint32_t m_height;
 		uint32_t m_flags;
-		tinystl::string m_title;
+		std::string m_title;
 		bool m_flagsEnabled;
 	};
 

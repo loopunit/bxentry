@@ -909,18 +909,6 @@ restart:
 		return s_exit;
 	}
 
-	void* TinyStlAllocator::static_allocate(size_t _bytes)
-	{
-		return new char[_bytes];
-	}
-
-	void TinyStlAllocator::static_deallocate(void* _ptr, size_t /*_bytes*/)
-	{
-		if (NULL != _ptr)
-		{
-			delete[] (char*)_ptr;
-		}
-	}
 } // namespace entry
 
 extern "C" bool entry_process_events(uint32_t* _width, uint32_t* _height, uint32_t* _debug, uint32_t* _reset)

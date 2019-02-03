@@ -12,10 +12,9 @@
 #include "cmd.h"
 #include "entry_p.h"
 
-#include <tinystl/allocator.h>
-#include <tinystl/string.h>
-#include <tinystl/unordered_map.h>
-namespace stl = tinystl;
+#include <string>
+#include <unordered_map>
+namespace stl = std;
 
 struct CmdContext
 {
@@ -87,16 +86,17 @@ struct CmdContext
 	CmdLookup m_lookup;
 };
 
-static CmdContext* s_cmdContext;
+static CmdContext* s_cmdContext = nullptr;
 
 void cmdInit()
 {
-	s_cmdContext = BX_NEW(entry::getAllocator(), CmdContext);
+	s_cmdContext = new CmdContext();
 }
 
 void cmdShutdown()
 {
-	BX_DELETE(entry::getAllocator(), s_cmdContext);
+	delete s_cmdContext;
+	s_cmdContext = nullptr;
 }
 
 void cmdAdd(const char* _name, ConsoleFn _fn, void* _userData)
