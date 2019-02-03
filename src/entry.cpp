@@ -564,7 +564,7 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 		BX_FREE(g_allocator, apps);
 	}
 
-	int main(int _argc, const char* const* _argv)
+	int local_main(int _argc, const char* const* _argv)
 	{
 		//DBG(BX_COMPILER_NAME " / " BX_CPU_NAME " / " BX_ARCH_NAME " / " BX_PLATFORM_NAME);
 
@@ -659,110 +659,100 @@ restart:
 
 		bool mouseLock = inputIsMouseLocked();
 
-		const Event* ev;
 		do
 		{
-			struct SE { const Event* m_ev; SE() : m_ev(poll() ) {} ~SE() { if (NULL != m_ev) { release(m_ev); } } } scopeEvent;
-			ev = scopeEvent.m_ev;
-
-			if (NULL != ev)
+			if (auto ev = poll())
 			{
-				switch (ev->m_type)
+				const bool exited = std::visit([&exited, _mouse, &_width, &_height, _debug, &_reset, &mouseLock, &handle](auto && arg)
 				{
-				case Event::Axis:
+					using T = std::decay_t<decltype(arg)>;
+					if constexpr (std::is_same_v<T, AxisEvent>)
 					{
-						const AxisEvent* axis = static_cast<const AxisEvent*>(ev);
-						inputSetGamepadAxis(axis->m_gamepad, axis->m_axis, axis->m_value);
+						inputSetGamepadAxis(arg.m_gamepad, arg.m_axis, arg.m_value);
 					}
-					break;
-
-				case Event::Char:
+					else if constexpr (std::is_same_v<T, CharEvent>)
 					{
-						const CharEvent* chev = static_cast<const CharEvent*>(ev);
-						inputChar(chev->m_len, chev->m_char);
+						inputChar(arg.m_len, arg.m_char);
 					}
-					break;
-
-				case Event::Exit:
-					return true;
-
-				case Event::Gamepad:
+					else if constexpr (std::is_same_v<T, GamepadEvent>)
 					{
-//						const GamepadEvent* gev = static_cast<const GamepadEvent*>(ev);
-//						DBG("gamepad %d, %d", gev->m_gamepad.idx, gev->m_connected);
+						//DBG("gamepad %d, %d", arg.m_gamepad.idx, arg.m_connected);
 					}
-					break;
-
-				case Event::Mouse:
+					else if constexpr (std::is_same_v<T, ExitEvent>)
 					{
-						const MouseEvent* mouse = static_cast<const MouseEvent*>(ev);
-						handle = mouse->m_handle;
+						return true;
+					}
+					else if constexpr (std::is_same_v<T, MouseEvent>)
+					{
+						handle = arg.m_handle;
 
-						inputSetMousePos(mouse->m_mx, mouse->m_my, mouse->m_mz);
-						if (!mouse->m_move)
+						inputSetMousePos(arg.m_mx, arg.m_my, arg.m_mz);
+						if (!arg.m_move)
 						{
-							inputSetMouseButtonState(mouse->m_button, mouse->m_down);
+							inputSetMouseButtonState(arg.m_button, arg.m_down);
 						}
 
 						if (NULL != _mouse
-						&&  !mouseLock)
+							&& !mouseLock)
 						{
-							_mouse->m_mx = mouse->m_mx;
-							_mouse->m_my = mouse->m_my;
-							_mouse->m_mz = mouse->m_mz;
-							if (!mouse->m_move)
+							_mouse->m_mx = arg.m_mx;
+							_mouse->m_my = arg.m_my;
+							_mouse->m_mz = arg.m_mz;
+							if (!arg.m_move)
 							{
-								_mouse->m_buttons[mouse->m_button] = mouse->m_down;
+								_mouse->m_buttons[arg.m_button] = arg.m_down;
 							}
 						}
 					}
-					break;
-
-				case Event::Key:
+					else if constexpr (std::is_same_v<T, KeyEvent>)
 					{
-						const KeyEvent* key = static_cast<const KeyEvent*>(ev);
-						handle = key->m_handle;
-
-						inputSetKeyState(key->m_key, key->m_modifiers, key->m_down);
+						handle = arg.m_handle;
+						inputSetKeyState(arg.m_key, arg.m_modifiers, arg.m_down);
 					}
-					break;
-
-				case Event::Size:
+					else if constexpr (std::is_same_v<T, SizeEvent>)
 					{
-						const SizeEvent* size = static_cast<const SizeEvent*>(ev);
 						WindowState& win = s_window[0];
-						win.m_handle = size->m_handle;
-						win.m_width  = size->m_width;
-						win.m_height = size->m_height;
+						win.m_handle = arg.m_handle;
+						win.m_width = arg.m_width;
+						win.m_height = arg.m_height;
 
-						handle  = size->m_handle;
-						_width  = size->m_width;
-						_height = size->m_height;
-						_reset  = !s_reset; // force reset
+						handle = arg.m_handle;
+						_width = arg.m_width;
+						_height = arg.m_height;
+						_reset = !s_reset; // force reset
 					}
-					break;
-
-				case Event::Window:
-					break;
-
-				case Event::Suspend:
-					break;
-
-				case Event::DropFile:
+					else if constexpr (std::is_same_v<T, WindowEvent>)
 					{
-						const DropFileEvent* drop = static_cast<const DropFileEvent*>(ev);
-						DBG("%s", drop->m_filePath.get() );
 					}
-					break;
+					else if constexpr (std::is_same_v<T, SuspendEvent>)
+					{
+					}
+					else if constexpr (std::is_same_v<T, DropFileEvent>)
+					{
+						//DBG("%s", drop->m_filePath.get());
+					}
+					//else
+					//{
+					//	static_assert(always_false<T>::value, "non-exhaustive visitor!");
+					//}
+					return false;
+				}, *ev);
 
-				default:
+				if (exited)
+				{
+					s_exit = true;
 					break;
 				}
 			}
+			else
+			{
+				break;
+			}
+
 
 			inputProcess();
 
-		} while (NULL != ev);
+		} while (true);
 
 		if (handle.idx == 0
 		&&  _reset != s_reset)
@@ -790,141 +780,106 @@ restart:
 		bool mouseLock = inputIsMouseLocked();
 		bool clearDropFile = true;
 
-		const Event* ev;
 		do
 		{
-			struct SE
+			if (auto ev = poll())
 			{
-				SE(WindowHandle _handle)
-					: m_ev(poll(_handle) )
+				const bool exited = std::visit([&exited, _state, _debug, &_reset, &mouseLock, &handle, &clearDropFile](auto && arg)
 				{
-				}
+					WindowState& win = s_window[arg.m_handle.idx];
 
-				~SE()
-				{
-					if (NULL != m_ev)
+					using T = std::decay_t<decltype(arg)>;
+					if constexpr (std::is_same_v<T, AxisEvent>)
 					{
-						release(m_ev);
+						inputSetGamepadAxis(arg.m_gamepad, arg.m_axis, arg.m_value);
 					}
-				}
-
-				const Event* m_ev;
-
-			} scopeEvent(handle);
-			ev = scopeEvent.m_ev;
-
-			if (NULL != ev)
-			{
-				handle = ev->m_handle;
-				WindowState& win = s_window[handle.idx];
-
-				switch (ev->m_type)
-				{
-				case Event::Axis:
+					else if constexpr (std::is_same_v<T, CharEvent>)
 					{
-						const AxisEvent* axis = static_cast<const AxisEvent*>(ev);
-						inputSetGamepadAxis(axis->m_gamepad, axis->m_axis, axis->m_value);
+						win.m_handle = arg.m_handle;
+						inputChar(arg.m_len, arg.m_char);
 					}
-					break;
-
-				case Event::Char:
+					else if constexpr (std::is_same_v<T, ExitEvent>)
 					{
-						const CharEvent* chev = static_cast<const CharEvent*>(ev);
-						win.m_handle = chev->m_handle;
-						inputChar(chev->m_len, chev->m_char);
+						return true;
 					}
-					break;
-
-				case Event::Exit:
-					return true;
-
-				case Event::Gamepad:
+					else if constexpr (std::is_same_v<T, GamepadEvent>)
 					{
-						const GamepadEvent* gev = static_cast<const GamepadEvent*>(ev);
-						DBG("gamepad %d, %d", gev->m_gamepad.idx, gev->m_connected);
+						//DBG("gamepad %d, %d", gev->m_gamepad.idx, gev->m_connected);
 					}
-					break;
-
-				case Event::Mouse:
+					else if constexpr (std::is_same_v<T, MouseEvent>)
 					{
-						const MouseEvent* mouse = static_cast<const MouseEvent*>(ev);
-						win.m_handle = mouse->m_handle;
+						win.m_handle = arg.m_handle;
 
-						if (mouse->m_move)
+						if (arg.m_move)
 						{
-							inputSetMousePos(mouse->m_mx, mouse->m_my, mouse->m_mz);
+							inputSetMousePos(arg.m_mx, arg.m_my, arg.m_mz);
 						}
 						else
 						{
-							inputSetMouseButtonState(mouse->m_button, mouse->m_down);
+							inputSetMouseButtonState(arg.m_button, arg.m_down);
 						}
 
 						if (!mouseLock)
 						{
-							if (mouse->m_move)
+							if (arg.m_move)
 							{
-								win.m_mouse.m_mx = mouse->m_mx;
-								win.m_mouse.m_my = mouse->m_my;
-								win.m_mouse.m_mz = mouse->m_mz;
+								win.m_mouse.m_mx = arg.m_mx;
+								win.m_mouse.m_my = arg.m_my;
+								win.m_mouse.m_mz = arg.m_mz;
 							}
 							else
 							{
-								win.m_mouse.m_buttons[mouse->m_button] = mouse->m_down;
+								win.m_mouse.m_buttons[arg.m_button] = arg.m_down;
 							}
 						}
 					}
-					break;
-
-				case Event::Key:
+					else if constexpr (std::is_same_v<T, KeyEvent>)
 					{
-						const KeyEvent* key = static_cast<const KeyEvent*>(ev);
-						win.m_handle = key->m_handle;
+						win.m_handle = arg.m_handle;
 
-						inputSetKeyState(key->m_key, key->m_modifiers, key->m_down);
+						inputSetKeyState(arg.m_key, arg.m_modifiers, arg.m_down);
 					}
-					break;
-
-				case Event::Size:
+					else if constexpr (std::is_same_v<T, SizeEvent>)
 					{
-						const SizeEvent* size = static_cast<const SizeEvent*>(ev);
-						win.m_handle = size->m_handle;
-						win.m_width  = size->m_width;
-						win.m_height = size->m_height;
-						_reset  = win.m_handle.idx == 0
-								? !s_reset
-								: _reset
-								; // force reset
+						win.m_handle = arg.m_handle;
+						win.m_width = arg.m_width;
+						win.m_height = arg.m_height;
+						_reset = win.m_handle.idx == 0
+							? !s_reset
+							: _reset
+							; // force reset
 					}
-					break;
-
-				case Event::Window:
+					else if constexpr (std::is_same_v<T, WindowEvent>)
 					{
-						const WindowEvent* window = static_cast<const WindowEvent*>(ev);
-						win.m_handle = window->m_handle;
-						win.m_nwh    = window->m_nwh;
-						ev = NULL;
+						win.m_handle = arg.m_handle;
+						win.m_nwh = arg.m_nwh;
 					}
-					break;
-
-				case Event::Suspend:
-					break;
-
-				case Event::DropFile:
+					else if constexpr (std::is_same_v<T, DropFileEvent>)
 					{
-						const DropFileEvent* drop = static_cast<const DropFileEvent*>(ev);
-						win.m_dropFile = drop->m_filePath;
+						win.m_dropFile = arg.m_filePath;
 						clearDropFile = false;
 					}
-					break;
+					//else
+					//{
+					//	static_assert(always_false<T>::value, "non-exhaustive visitor!");
+					//}
+					return false;
+				}, *ev);
 
-				default:
+				if (exited)
+				{
+					s_exit = true;
 					break;
 				}
+			}
+			else
+			{
+				break;
 			}
 
 			inputProcess();
 
-		} while (NULL != ev);
+		} while (true);
 
 		if (isValid(handle) )
 		{
@@ -954,39 +909,18 @@ restart:
 		return s_exit;
 	}
 
-	bx::FileReaderI* getFileReader()
-	{
-		return s_fileReader;
-	}
-
-	bx::FileWriterI* getFileWriter()
-	{
-		return s_fileWriter;
-	}
-
-	bx::AllocatorI* getAllocator()
-	{
-		if (NULL == g_allocator)
-		{
-			g_allocator = getDefaultAllocator();
-		}
-
-		return g_allocator;
-	}
-
 	void* TinyStlAllocator::static_allocate(size_t _bytes)
 	{
-		return BX_ALLOC(getAllocator(), _bytes);
+		return new char[_bytes];
 	}
 
 	void TinyStlAllocator::static_deallocate(void* _ptr, size_t /*_bytes*/)
 	{
 		if (NULL != _ptr)
 		{
-			BX_FREE(getAllocator(), _ptr);
+			delete[] (char*)_ptr;
 		}
 	}
-
 } // namespace entry
 
 extern "C" bool entry_process_events(uint32_t* _width, uint32_t* _height, uint32_t* _debug, uint32_t* _reset)

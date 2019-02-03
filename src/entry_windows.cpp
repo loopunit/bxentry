@@ -1049,20 +1049,16 @@ namespace entry
 		return s_ctx.process(_hwnd, _id, _wparam, _lparam);
 	}
 
-	const Event* poll()
+	std::optional<AnyEvent> poll()
 	{
 		return s_ctx.m_eventQueue.poll();
 	}
 
-	const Event* poll(WindowHandle _handle)
+	std::optional<AnyEvent> poll(WindowHandle _handle)
 	{
 		return s_ctx.m_eventQueue.poll(_handle);
 	}
 
-	void release(const Event* _event)
-	{
-		s_ctx.m_eventQueue.release(_event);
-	}
 
 	WindowHandle createWindow(int32_t _x, int32_t _y, uint32_t _width, uint32_t _height, uint32_t _flags, const char* _title)
 	{
@@ -1136,7 +1132,7 @@ namespace entry
 	int32_t MainThreadEntry::threadFunc(bx::Thread* /*_thread*/, void* _userData)
 	{
 		MainThreadEntry* self = (MainThreadEntry*)_userData;
-		int32_t result = main(self->m_argc, self->m_argv);
+		int32_t result = local_main(self->m_argc, self->m_argv);
 		PostMessage(s_ctx.m_hwnd[0], WM_QUIT, 0, 0);
 		return result;
 	}

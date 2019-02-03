@@ -13,6 +13,10 @@
 
 #include "entry.h"
 
+#include <queue>
+#include <variant>
+#include <optional>
+
 #ifndef ENTRY_CONFIG_USE_NOOP
 #	define ENTRY_CONFIG_USE_NOOP 0
 #endif // ENTRY_CONFIG_USE_NOOP
@@ -68,7 +72,8 @@ namespace entry
 		static void static_deallocate(void* _ptr, size_t /*_bytes*/);
 	};
 
-	int main(int _argc, const char* const* _argv);
+
+	int local_main(int _argc, const char* const* _argv);
 
 	char keyToAscii(Key::Enum _key, uint8_t _modifiers);
 
@@ -111,6 +116,11 @@ namespace entry
 		GamepadAxis::Enum m_axis;
 		int32_t m_value;
 		GamepadHandle m_gamepad;
+	};
+
+	struct ExitEvent : public Event
+	{
+		ENTRY_IMPLEMENT_EVENT(ExitEvent, Event::Exit);
 	};
 
 	struct CharEvent : public Event
@@ -179,146 +189,177 @@ namespace entry
 		bx::FilePath m_filePath;
 	};
 
-	const Event* poll();
-	const Event* poll(WindowHandle _handle);
-	void release(const Event* _event);
+	using AnyEvent = std::variant<AxisEvent, CharEvent, ExitEvent, GamepadEvent, KeyEvent, MouseEvent, SizeEvent, WindowEvent, SuspendEvent, DropFileEvent>;
+
+	std::optional<AnyEvent> poll();
+	std::optional<AnyEvent> poll(WindowHandle _handle);
 
 	class EventQueue
 	{
+		std::queue<AnyEvent> m_queue;
 	public:
 		EventQueue()
-			: m_queue(getAllocator() )
 		{
 		}
 
 		~EventQueue()
 		{
-			for (const Event* ev = poll(); NULL != ev; ev = poll() )
-			{
-				release(ev);
-			}
 		}
 
 		void postAxisEvent(WindowHandle _handle, GamepadHandle _gamepad, GamepadAxis::Enum _axis, int32_t _value)
 		{
-			AxisEvent* ev = BX_NEW(getAllocator(), AxisEvent)(_handle);
-			ev->m_gamepad = _gamepad;
-			ev->m_axis    = _axis;
-			ev->m_value   = _value;
-			m_queue.push(ev);
+			using ThisEvent = AxisEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_gamepad = _gamepad;
+			ev.m_axis    = _axis;
+			ev.m_value   = _value;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postCharEvent(WindowHandle _handle, uint8_t _len, const uint8_t _char[4])
 		{
-			CharEvent* ev = BX_NEW(getAllocator(), CharEvent)(_handle);
-			ev->m_len = _len;
-			bx::memCopy(ev->m_char, _char, 4);
-			m_queue.push(ev);
+			using ThisEvent = CharEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_len = _len;
+			bx::memCopy(ev.m_char, _char, 4);
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postExitEvent()
 		{
-			Event* ev = BX_NEW(getAllocator(), Event)(Event::Exit);
-			m_queue.push(ev);
+			using ThisEvent = ExitEvent;
+
+			AnyEvent ev{ ThisEvent(WindowHandle{0}) };
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postGamepadEvent(WindowHandle _handle, GamepadHandle _gamepad, bool _connected)
 		{
-			GamepadEvent* ev = BX_NEW(getAllocator(), GamepadEvent)(_handle);
-			ev->m_gamepad   = _gamepad;
-			ev->m_connected = _connected;
-			m_queue.push(ev);
+			using ThisEvent = GamepadEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_gamepad   = _gamepad;
+			ev.m_connected = _connected;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postKeyEvent(WindowHandle _handle, Key::Enum _key, uint8_t _modifiers, bool _down)
 		{
-			KeyEvent* ev = BX_NEW(getAllocator(), KeyEvent)(_handle);
-			ev->m_key       = _key;
-			ev->m_modifiers = _modifiers;
-			ev->m_down      = _down;
-			m_queue.push(ev);
+			using ThisEvent = KeyEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_key       = _key;
+			ev.m_modifiers = _modifiers;
+			ev.m_down      = _down;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postMouseEvent(WindowHandle _handle, int32_t _mx, int32_t _my, int32_t _mz)
 		{
-			MouseEvent* ev = BX_NEW(getAllocator(), MouseEvent)(_handle);
-			ev->m_mx     = _mx;
-			ev->m_my     = _my;
-			ev->m_mz     = _mz;
-			ev->m_button = MouseButton::None;
-			ev->m_down   = false;
-			ev->m_move   = true;
-			m_queue.push(ev);
+			using ThisEvent = MouseEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_mx     = _mx;
+			ev.m_my     = _my;
+			ev.m_mz     = _mz;
+			ev.m_button = MouseButton::None;
+			ev.m_down   = false;
+			ev.m_move   = true;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postMouseEvent(WindowHandle _handle, int32_t _mx, int32_t _my, int32_t _mz, MouseButton::Enum _button, bool _down)
 		{
-			MouseEvent* ev = BX_NEW(getAllocator(), MouseEvent)(_handle);
-			ev->m_mx     = _mx;
-			ev->m_my     = _my;
-			ev->m_mz     = _mz;
-			ev->m_button = _button;
-			ev->m_down   = _down;
-			ev->m_move   = false;
-			m_queue.push(ev);
+			using ThisEvent = MouseEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_mx     = _mx;
+			ev.m_my     = _my;
+			ev.m_mz     = _mz;
+			ev.m_button = _button;
+			ev.m_down   = _down;
+			ev.m_move   = false;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postSizeEvent(WindowHandle _handle, uint32_t _width, uint32_t _height)
 		{
-			SizeEvent* ev = BX_NEW(getAllocator(), SizeEvent)(_handle);
-			ev->m_width  = _width;
-			ev->m_height = _height;
-			m_queue.push(ev);
+			using ThisEvent = SizeEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_width  = _width;
+			ev.m_height = _height;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postWindowEvent(WindowHandle _handle, void* _nwh = NULL)
 		{
-			WindowEvent* ev = BX_NEW(getAllocator(), WindowEvent)(_handle);
-			ev->m_nwh = _nwh;
-			m_queue.push(ev);
+			using ThisEvent = WindowEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_nwh = _nwh;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postSuspendEvent(WindowHandle _handle, Suspend::Enum _state)
 		{
-			SuspendEvent* ev = BX_NEW(getAllocator(), SuspendEvent)(_handle);
-			ev->m_state = _state;
-			m_queue.push(ev);
+			using ThisEvent = SuspendEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_state = _state;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
 		void postDropFileEvent(WindowHandle _handle, const bx::FilePath& _filePath)
 		{
-			DropFileEvent* ev = BX_NEW(getAllocator(), DropFileEvent)(_handle);
-			ev->m_filePath = _filePath;
-			m_queue.push(ev);
+			using ThisEvent = DropFileEvent;
+
+			ThisEvent ev(_handle);
+			ev.m_filePath = _filePath;
+			m_queue.emplace(AnyEvent{ ev });
 		}
 
-		const Event* poll()
+		std::optional<AnyEvent> poll()
 		{
-			return m_queue.pop();
-		}
-
-		const Event* poll(WindowHandle _handle)
-		{
-			if (isValid(_handle) )
+			if (m_queue.empty())
 			{
-				Event* ev = m_queue.peek();
-				if (NULL == ev
-				||  ev->m_handle.idx != _handle.idx)
+				return std::nullopt;
+			}
+
+			AnyEvent ev = m_queue.front();
+			m_queue.pop();
+			return ev;
+		}
+
+		std::optional<AnyEvent> poll(WindowHandle _handle)
+		{
+			if (m_queue.empty())
+			{
+				return std::nullopt;
+			}
+
+			if (isValid(_handle))
+			{
+				AnyEvent ev = m_queue.front();
+
+				if (std::visit([_handle](auto && ev)
 				{
-					return NULL;
+					return ev.m_type == Event::Exit || ev.m_handle.idx == _handle.idx;
+				}, ev))
+				{
+					m_queue.pop();
+					return ev;
+				}
+				else
+				{
+					return std::nullopt;
 				}
 			}
 
 			return poll();
 		}
-
-		void release(const Event* _event) const
-		{
-			BX_DELETE(getAllocator(), const_cast<Event*>(_event) );
-		}
-
-	private:
-		bx::SpScUnboundedQueueT<Event> m_queue;
 	};
 
 } // namespace entry
